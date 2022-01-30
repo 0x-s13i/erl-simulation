@@ -18,39 +18,48 @@ init(Name, X, Y) ->
 
 loop(AnimalDB) ->
     receive
-        {move, Name, up} ->
+        {move, From, Name, up} ->
             ets:update_element(AnimalDB, Name, {4, lookupY(AnimalDB, Name) + 1}),
-            [{_,_,X,Y}] = ets:lookup(AnimalDB, Name),
-            io:format("~p: Moved to position {~p,~p}~n", [Name,X,Y]),
+            From ! {reply, positionIo(AnimalDB, Name)},
             loop(AnimalDB);
-        {move, Name, down} ->
+        {move, From, Name, down} ->
             ets:update_element(AnimalDB, Name, {4, lookupY(AnimalDB, Name) - 1}),
-            [{_,_,X,Y}] = ets:lookup(AnimalDB, Name),
-            io:format("~p: Moved to position {~p,~p}~n", [Name,X,Y]),
+            From ! {reply, positionIo(AnimalDB, Name)},
             loop(AnimalDB);
-        {move, Name, left} ->
+        {move, From, Name, left} ->
             ets:update_element(AnimalDB, Name, {3, lookupX(AnimalDB, Name) - 1}),
-            [{_,_,X,Y}] = ets:lookup(AnimalDB, Name),
-            io:format("~p: Moved to position {~p,~p}~n", [Name,X,Y]),
+            From ! {reply, positionIo(AnimalDB, Name)},
             loop(AnimalDB);
-        {move, Name, right} ->
+        {move, From, Name, right} ->
             ets:update_element(AnimalDB, Name, {3, lookupX(AnimalDB, Name) + 1}),
-            [{_,_,X,Y}] = ets:lookup(AnimalDB, Name),
-            io:format("~p: Moved to position {~p,~p}~n", [Name,X,Y]),
+            From ! {reply, positionIo(AnimalDB, Name)},
             loop(AnimalDB);
-        stop ->
-            ok
+        {stop, Name} ->
+            terminate(Name)
     end.
 
 move(Name, Move) ->
-    Name ! {move, Name, Move},
-    ok.
-
-sleep(Name, Time) ->
-    ok.
+    Name ! {move, self(), Name, Move},
+    receive
+        {reply, Reply} -> Reply
+    end.
+    
+sleep(_Name, Time) ->
+    receive
+        after Time -> ok
+    end.
 
 stop(Name) ->
+    io:format("Stopping ~p~n", [Name]),
+    Name ! {stop, self(), Name},
     ok.
+
+terminate(Name) ->
+    exit(whereis(Name), kill).
+
+positionIo(Db, Key) ->
+    [{_,_,X,Y}] = ets:lookup(Db, Key),
+    io:format("~p: Moved to position {~p,~p}~n", [Key,X,Y]).
 
 lookupY(Db, Key) ->
     [{_,_,_,Y}] = ets:lookup(Db, Key),
