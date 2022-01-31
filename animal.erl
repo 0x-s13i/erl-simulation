@@ -18,22 +18,21 @@ init(Name, X, Y) ->
 
 loop(AnimalDB) ->
     receive
-        {move, From, Name, up} ->
-            ets:update_element(AnimalDB, Name, {4, lookupY(AnimalDB, Name) + 1}),
-            From ! {reply, positionIo(AnimalDB, Name)},
-            loop(AnimalDB);
-        {move, From, Name, down} ->
-            ets:update_element(AnimalDB, Name, {4, lookupY(AnimalDB, Name) - 1}),
-            From ! {reply, positionIo(AnimalDB, Name)},
-            loop(AnimalDB);
-        {move, From, Name, left} ->
-            ets:update_element(AnimalDB, Name, {3, lookupX(AnimalDB, Name) - 1}),
-            From ! {reply, positionIo(AnimalDB, Name)},
-            loop(AnimalDB);
-        {move, From, Name, right} ->
-            ets:update_element(AnimalDB, Name, {3, lookupX(AnimalDB, Name) + 1}),
-            From ! {reply, positionIo(AnimalDB, Name)},
-            loop(AnimalDB);
+        {move, From, Name, Direction} ->
+            case Direction of
+                up ->    ets:update_element(AnimalDB, Name, {4, lookup(AnimalDB, Name, y) + 1}),
+                         From ! {reply, positionIo(AnimalDB, Name)},
+                         loop(AnimalDB);
+                down ->  ets:update_element(AnimalDB, Name, {4, lookup(AnimalDB, Name, y) + 1}),
+                         From ! {reply, positionIo(AnimalDB, Name)},
+                         loop(AnimalDB);
+                left ->  ets:update_element(AnimalDB, Name, {3, lookup(AnimalDB, Name, x) - 1}),
+                         From ! {reply, positionIo(AnimalDB, Name)},
+                         loop(AnimalDB);
+                right -> ets:update_element(AnimalDB, Name, {3, lookup(AnimalDB, Name, x) + 1}),
+                         From ! {reply, positionIo(AnimalDB, Name)},
+                         loop(AnimalDB)
+            end;
         {stop, Name} ->
             terminate(Name)
     end.
@@ -61,10 +60,8 @@ positionIo(Db, Key) ->
     [{_,_,X,Y}] = ets:lookup(Db, Key),
     io:format("~p: Moved to position {~p,~p}~n", [Key,X,Y]).
 
-lookupY(Db, Key) ->
-    [{_,_,_,Y}] = ets:lookup(Db, Key),
-    Y.
-
-lookupX(Db, Key) ->
-    [{_,_,X,_}] = ets:lookup(Db, Key),
-    X.
+lookup(Db, Key, XorY) ->
+    case XorY of
+        y -> [{_,_,_,Y}] = ets:lookup(Db, Key), Y;
+        x -> [{_,_,X,_}] = ets:lookup(Db, Key), X
+    end.
