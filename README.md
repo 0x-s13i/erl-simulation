@@ -1,27 +1,15 @@
 # erl-simulation
 Erlang implementation of a simulated world where animals roam around virtual worlds.
 
-This part of the assignment creates an animal process which roams around the world, not worrying about obstacles, other animals, or the edge of the earth. It uses `io:format/2` to provide feedback on the animals location.
+Implementing the backend of a simulated world where animals roam
+around virtual worlds. In doing so, they have to avoid water, obstacles and other animals. Many (distributed) worlds will exist in parallel, and animals will be able to move in between these worlds whenever they stumble upon a teleporter (yes, they do exist!).
 
-Compile with
-    
-    > c(animal).
-    {ok,animal}
+The animal process will consist of a functional interface used by intelligent agents. Actions agents can perform on the animals include:
 
-An example with a turtle:
+* Join and leave a world
+* Move up, down, left and right
+* Pause in between moves
 
-    > animal:start_link(turtle, {4,3}).
-    turtle: Started in position {4,3}
-    {ok,<0.86.0>}
-    > animal:move(turtle, up).
-    turtle: Moved to position {4,4}
-    ok
-    > animal:move(turtle, up), animal:move(turtle, up), animal:move(turtle, up).
-    turtle: Moved to position {4,5}
-    turtle: Moved to position {4,6}
-    turtle: Moved to position {4,7}
-    ok
-    > animal:move(turtle, right), animal:move(turtle, right).
-    turtle: Moved to position {5,7}
-    turtle: Moved to position {6,7}
-    ok
+The world will consist of a two dimensional, square grid inhabited by animals moving from slot to slot. Ahead of every move, they will be told by a server if the slot they want to enter free, if it contains a teleporter, an obstacle or other animals. This being a flat earth, the server will also be responsible to ensure animals do not fall off the edge.
+
+The exercise into smaller parts that are easier to develop and test. By the end they will be combined into a supervision tree and distributed across multiple worlds.

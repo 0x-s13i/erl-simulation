@@ -23,7 +23,7 @@ loop(AnimalDB) ->
                 up ->    ets:update_element(AnimalDB, Name, {4, lookup(AnimalDB, Name, y) + 1}),
                          From ! {reply, positionIo(AnimalDB, Name)},
                          loop(AnimalDB);
-                down ->  ets:update_element(AnimalDB, Name, {4, lookup(AnimalDB, Name, y) + 1}),
+                down ->  ets:update_element(AnimalDB, Name, {4, lookup(AnimalDB, Name, y) - 1}),
                          From ! {reply, positionIo(AnimalDB, Name)},
                          loop(AnimalDB);
                 left ->  ets:update_element(AnimalDB, Name, {3, lookup(AnimalDB, Name, x) - 1}),
