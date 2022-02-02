@@ -1,6 +1,6 @@
 -module(animal).
 
--export([start_link / 2, move/2, sleep/2, stop/1]).
+-export([start_link / 2, move/2, sleep/2, stop/1, move_coords/2]).
 -export([init/3]).
 
 -record(animal, {name, xPosition, yPosition}).
@@ -42,6 +42,11 @@ move(Name, Move) ->
     receive
         {reply, Reply} -> Reply
     end.
+
+move_coords(Name, Coords) ->
+    %%% TODO -> Implement the functionality
+    %%% to move animal through the loop
+    io:format("~p moved to ~p~n", [Name, Coords]).
     
 sleep(_Name, Time) ->
     receive
