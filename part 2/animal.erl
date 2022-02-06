@@ -18,6 +18,10 @@ init(Name, X, Y) ->
 
 loop(AnimalDB) ->
     receive
+        {moveCoords, From, Name, Coords} ->
+            {X, Y} = Coords,
+            ets:insert(AnimalDB, #animal{name = Name, xPosition = X, yPosition = Y}),
+            From ! {reply, positionIo(AnimalDB, Name)};
         {move, From, Name, Direction} ->
             case Direction of
                 up ->    ets:update_element(AnimalDB, Name, {4, lookup(AnimalDB, Name, y) + 1}),
@@ -44,9 +48,10 @@ move(Name, Move) ->
     end.
 
 move_coords(Name, Coords) ->
-    %%% TODO -> Implement the functionality
-    %%% to move animal through the loop
-    io:format("~p moved to ~p~n", [Name, Coords]).
+    Name ! {moveCoords, self(), Name, Coords},
+    receive
+        {reply, Reply} -> Reply
+    end.
     
 sleep(_Name, Time) ->
     receive
