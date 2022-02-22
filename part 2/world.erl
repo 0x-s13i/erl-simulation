@@ -19,6 +19,7 @@ start_link(Filename) ->
 
 init(_) ->
     %%% Need to initialise at least on animal to get started
+    %%% Should this be using a gen_server cast instead...
     {ok, animal:start_link(turtle, {4, 3})}.
 
 grid_into_db(Grid) ->
@@ -52,9 +53,16 @@ move(AnimalName, {X, Y}) ->
     check_animals(X, Y),
 
     %%% Think about new animals, and storing positions permanently
-    
-    io:format("~p: Moved to position {~p,~p}~n", [AnimalName, X, Y]),
-    gen_server:cast(?MODULE, {move_coords, AnimalName, {X, Y}}).
+    AnimalLookup = check_animal_exists(AnimalName),
+    case AnimalLookup of
+        [_] -> gen_server:cast(?MODULE, {move_coords, AnimalName, {X, Y}}),
+               io:format("~p: Moved to position {~p,~p}~n", [AnimalName, X, Y]);
+        [] -> animal:start_link(AnimalName, {X, Y})
+    end.
+
+check_animal_exists(AnimalName) ->
+    AnimalLookup = ets:lookup(worldAnimalDb, AnimalName),
+    AnimalLookup.
 
 check_animals(X, Y) ->
     AnimalCheck = lists:flatten(ets:match(worldAnimalDb, #animal{name='$1', xPosition=X, yPosition=Y})),
@@ -62,7 +70,7 @@ check_animals(X, Y) ->
 
 check_animal_clash([]) ->
     ok;
-check_animal_clash([H|T]) ->
+check_animal_clash([_]) ->
     throw("There is an animal in the area you're trying to move to").
 
 check_obstacles(Coords, Obstacle) ->
