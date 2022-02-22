@@ -15,7 +15,7 @@ move_coords(Name, Coords, AnimalDb) ->
     ets:insert(worldAnimalDb, #animal{name = Name, xPosition = X, yPosition = Y}),
     AnimalDb.
 
-% delete(Name, AnimalDb) ->
-%     io:format("Stopping ~p~n", [Name]),
-%     exit(whereis(Name), kill),
-%     AnimalDb.
+delete(Name, AnimalDb) ->
+    io:format("Stopping ~p~n", [Name]),
+    ets:delete(worldAnimalDb, Name),
+    AnimalDb.

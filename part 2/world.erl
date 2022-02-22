@@ -94,9 +94,8 @@ get(AnimalName) ->
     io:format("~p is in location ~p,~p~n", [AnimalName, X, Y]),
     ok.
 
-% delete(AnimalName) ->
-%     % gen_server:cast(?MODULE, {delete, AnimalName}).
-%     exit(whereis(AnimalName), kill).
+delete(AnimalName) ->
+    gen_server:cast(?MODULE, {delete, AnimalName}).
 
 handle_cast({move_coords, AnimalName, {X, Y}}, AnimalDb) ->
     {noreply, animal:move_coords(AnimalName, {X, Y}, AnimalDb)};
