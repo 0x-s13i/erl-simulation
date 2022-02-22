@@ -1,7 +1,7 @@
 # erl-simulation
 Erlang implementation of a simulated world where animals roam around virtual worlds.
 
-This part of the assignment creates an animal process which roams around the world, not worrying about obstacles, other animals, or the edge of the earth. It uses `io:format/2` to provide feedback on the animals location.
+This part of the exercise creates an animal process which roams around the world, not worrying about obstacles, other animals, or the edge of the earth. It uses `io:format/2` to provide feedback on the animals location.
 
 Compile with
     
