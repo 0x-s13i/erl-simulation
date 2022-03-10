@@ -6,21 +6,19 @@
 -record(gridSize, {widthX, widthY}).
 -record(animal, {name, xPosition, yPosition}).
 
--compile({no_auto_import,[get/1]}).
+start_link() -> start_link('world.config').
 
 start_link(Filename) ->
     {ok, [Config]} = file:consult(Filename),
     {GridSize, _Teleporters, Obstacles} = Config,
     grid_into_db(GridSize),
     obstacles_into_db(Obstacles),
-    %%% TODO -> Change ETS table to DETS or use mnesia
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []),
     ets:new(worldAnimalDb, [named_table, set, {keypos, #animal.name}, public]),
-    gen_server:start_link({local, ?MODULE},?MODULE,[],[]).
+    ok.
 
 init(_) ->
-    %%% Need to initialise at least on animal to get started
-    %%% Should this be using a gen_server cast instead...
-    {ok, animal:start_link(turtle, {4, 3})}.
+    {ok, self()}.
 
 grid_into_db(Grid) ->
     {WidthX, WidthY} = Grid,
@@ -36,7 +34,6 @@ obstacles_into_db(Obstacles) ->
     ok.
 
 move(AnimalName, {X, Y}) ->
-    % Check movement is in grid
     [GridDimensions] = ets:lookup(gridDb, gridSize),
     {_, Xmax, Ymax} = GridDimensions,
     if
@@ -55,9 +52,8 @@ move(AnimalName, {X, Y}) ->
     %%% Think about new animals, and storing positions permanently
     AnimalLookup = check_animal_exists(AnimalName),
     case AnimalLookup of
-        [_] -> gen_server:cast(?MODULE, {move_coords, AnimalName, {X, Y}}),
-               io:format("~p: Moved to position {~p,~p}~n", [AnimalName, X, Y]);
-        [] -> animal:start_link(AnimalName, {X, Y})
+        [_] ->  gen_server:cast(?MODULE, {move_coords, AnimalName, {X, Y}});
+        [] ->   animal:start_link(AnimalName, {X, Y})
     end.
 
 check_animal_exists(AnimalName) ->
@@ -91,13 +87,14 @@ check_coordinates_clash(AnimalCoords, [H|T]) ->
 get(AnimalName) ->
     [AnimalLocation] = ets:lookup(worldAnimalDb, AnimalName),
     {_,_,X,Y} = AnimalLocation,
-    io:format("~p is in location ~p,~p~n", [AnimalName, X, Y]),
+    io:format("~p: is in location {~p,~p}~n", [AnimalName, X, Y]),
     ok.
 
 delete(AnimalName) ->
-    gen_server:cast(?MODULE, {delete, AnimalName}).
+    ets:delete(worldAnimalDb, AnimalName),
+    AnimalName ! exit(whereis(AnimalName), kill),
+    ok.
 
 handle_cast({move_coords, AnimalName, {X, Y}}, AnimalDb) ->
-    {noreply, animal:move_coords(AnimalName, {X, Y}, AnimalDb)};
-handle_cast({delete, AnimalName}, AnimalDb) ->
-    {noreply, animal:delete(AnimalName, AnimalDb)}.
+    animal:move_coords(AnimalName, {X, Y}),
+    {noreply, AnimalDb}.
