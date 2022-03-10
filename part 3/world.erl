@@ -13,9 +13,8 @@ start_link(Filename) ->
     {GridSize, _Teleporters, Obstacles} = Config,
     grid_into_db(GridSize),
     obstacles_into_db(Obstacles),
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []),
     ets:new(worldAnimalDb, [named_table, set, {keypos, #animal.name}, public]),
-    ok.
+    {ok, _Pid} = gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init(_) ->
     {ok, self()}.

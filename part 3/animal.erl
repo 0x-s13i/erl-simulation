@@ -6,7 +6,7 @@
 -record(animal, {name, xPosition, yPosition}).
 
 start_link(Name, {X, Y}) ->
-    Pid = spawn(?MODULE, init, [Name, X, Y]),
+    Pid = spawn_link(?MODULE, init, [Name, X, Y]),
     register(Name, Pid),
     {ok, Pid}.
 
