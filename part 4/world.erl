@@ -97,7 +97,4 @@ delete(AnimalName) ->
 
 handle_cast({move_coords, AnimalName, {X, Y}}, AnimalDb) ->
     animal:move_coords(AnimalName, {X, Y}),
-    {noreply, AnimalDb};
-handle_cast({stop, AnimalName}, AnimalDb) ->
-    animal:stop(AnimalName),
     {noreply, AnimalDb}.
