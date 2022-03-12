@@ -4,18 +4,19 @@
 -behaviour(gen_server).
 
 -record(gridSize, {widthX, widthY}).
--record(animal, {name, xPosition, yPosition}).
+-record(animal, {name, xPosition, yPosition, nodeName}).
+-record(node, {name, x, y, destX, destY}).
 
-start_link() -> start_link('world.config').
+% start_link() -> start_link('world.config').
 
 start_link(Filename) ->
     {ok, [Config]} = file:consult(Filename),
-    {GridSize, _Teleporters, Obstacles} = Config,
+    {GridSize, Teleporters, Obstacles} = Config,
     grid_into_db(GridSize),
     obstacles_into_db(Obstacles),
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []),
+    teleporters_into_db(Teleporters),
     ets:new(worldAnimalDb, [named_table, set, {keypos, #animal.name}, public]),
-    ok.
+    {ok, _Pid} = gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init(_) ->
     {ok, self()}.
@@ -31,6 +32,14 @@ obstacles_into_db(Obstacles) ->
     ets:insert(obstacleDb, Palm),
     ets:insert(obstacleDb, Rock),
     ets:insert(obstacleDb, Water),
+    ok.
+
+teleporters_into_db(Teleporters) ->
+    [{Node, Entry, Destination}] = Teleporters,
+    {X, Y} = Entry,
+    {DestX, DestY} = Destination,
+    ets:new(teleporterDb, [named_table, set]),
+    ets:insert(teleporterDb, #node{name = Node, x = X, y = Y, destX = DestX, destY = DestY}),
     ok.
 
 move(AnimalName, {X, Y}) ->
@@ -49,12 +58,40 @@ move(AnimalName, {X, Y}) ->
     % Check there are no other animals...
     check_animals(X, Y),
 
+    % Which node are we currently in &
+    [{_,DestNodeName,_,_,_,_}] = ets:lookup(teleporterDb, node),
+    if
+        DestNodeName ==  mars ->
+            ThisNodeName = earth;
+        DestNodeName == earth ->
+            ThisNodeName = mars
+    end,
+    % Only use this if animal lands on teleporter
+    % TODO -> FINISH
+    % check_teleporters(X, Y),
+
     %%% Think about new animals, and storing positions permanently
     AnimalLookup = check_animal_exists(AnimalName),
     case AnimalLookup of
-        [_] ->  gen_server:cast(?MODULE, {move_coords, AnimalName, {X, Y}});
-        [] ->   animal:start_link(AnimalName, {X, Y})
+        [_] ->  gen_server:cast(?MODULE, {move_coords, AnimalName, {X, Y}, ThisNodeName});
+        [] ->   animal:start_link(AnimalName, {X, Y}, ThisNodeName)
     end.
+
+% TODO -> FINISH
+% MAKE THIS THE MAIN POINT TO CHECK
+% check_teleporters(X, Y) ->
+%     [{_,DestNodeName,TeleX,TeleY,_,_}] = ets:lookup(teleporterDb, node),
+%     if
+%         (X == TeleX) and (Y == TeleY) ->
+%             if
+%                 DestNodeName ==  mars ->
+%                     ThisNodeName = earth;
+%                 DestNodeName == earth ->
+%                     ThisNodeName = mars
+%             end
+%         true ->
+            
+%     ok.
 
 check_animal_exists(AnimalName) ->
     AnimalLookup = ets:lookup(worldAnimalDb, AnimalName),
@@ -86,8 +123,8 @@ check_coordinates_clash(AnimalCoords, [H|T]) ->
 
 get(AnimalName) ->
     [AnimalLocation] = ets:lookup(worldAnimalDb, AnimalName),
-    {_,_,X,Y} = AnimalLocation,
-    io:format("~p: is in location {~p,~p}~n", [AnimalName, X, Y]),
+    {_,_,X,Y,NodeName} = AnimalLocation,
+    io:format("~p: is in location ~p {~p,~p}~n", [AnimalName, NodeName, X, Y]),
     ok.
 
 delete(AnimalName) ->
@@ -95,6 +132,6 @@ delete(AnimalName) ->
     AnimalName ! exit(whereis(AnimalName), kill),
     ok.
 
-handle_cast({move_coords, AnimalName, {X, Y}}, AnimalDb) ->
-    animal:move_coords(AnimalName, {X, Y}),
+handle_cast({move_coords, AnimalName, {X, Y}, NodeName}, AnimalDb) ->
+    animal:move_coords(AnimalName, {X, Y}, NodeName),
     {noreply, AnimalDb}.
