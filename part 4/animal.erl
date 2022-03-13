@@ -19,7 +19,7 @@ loop() ->
     receive
         {move_coords, Name, X, Y, NodeName} ->
             ets:insert(worldAnimalDb, #animal{name = Name, xPosition = X, yPosition = Y, nodeName = NodeName}),
-            io:format("~p: Moved to ~p {~p,~p}~n", [NodeName, Name, X, Y]),
+            io:format("~p: Moved to ~p {~p,~p}~n", [Name, NodeName, X, Y]),
             loop()
     end.
 
