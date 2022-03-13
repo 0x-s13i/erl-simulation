@@ -43,59 +43,59 @@ teleporters_into_db(Teleporters) ->
     ok.
 
 move(AnimalName, {X, Y}) ->
+    {DestNodeName, ThisNodeName} = check_teleporters(X, Y),
+    AnimalInfo = check_animal_in_right_world(AnimalName, DestNodeName),
+
+    case AnimalInfo of
+        [_] ->
+            check_grid_size(X, Y),
+            
+            check_obstacles({X, Y}, palm),
+            check_obstacles({X, Y}, rock),
+            check_obstacles({X, Y}, water),
+            
+            check_animals(X, Y),
+
+            gen_server:cast(?MODULE, {move_coords, AnimalName, {X, Y}, ThisNodeName});
+        [] ->
+            animal:start_link(AnimalName, {X, Y}, ThisNodeName)
+    end.
+
+check_grid_size(X, Y) ->
     [GridDimensions] = ets:lookup(gridDb, gridSize),
     {_, Xmax, Ymax} = GridDimensions,
     if
         (X > Xmax) or (Y > Ymax) ->
-            throw("Outside of grid range. You'll fall off the earth");
+            throw("Outside of grid range. You'll fall off the planet");
         true ->
             ok
-    end,
-    % Check there are no obstacles
-    check_obstacles({X, Y}, palm),
-    check_obstacles({X, Y}, rock),
-    check_obstacles({X, Y}, water),
-    % Check there are no other animals...
-    check_animals(X, Y),
-
-    % Which node are we currently in &
-    [{_,DestNodeName,_,_,_,_}] = ets:lookup(teleporterDb, node),
-    if
-        DestNodeName ==  mars ->
-            ThisNodeName = earth;
-        DestNodeName == earth ->
-            ThisNodeName = mars
-    end,
-    % Only use this if animal lands on teleporter
-    % TODO -> FINISH
-    % check_teleporters(X, Y),
-
-    %%% Think about new animals, and storing positions permanently
-    AnimalLookup = check_animal_exists(AnimalName),
-    case AnimalLookup of
-        [_] ->  gen_server:cast(?MODULE, {move_coords, AnimalName, {X, Y}, ThisNodeName});
-        [] ->   animal:start_link(AnimalName, {X, Y}, ThisNodeName)
     end.
 
-% TODO -> FINISH
-% MAKE THIS THE MAIN POINT TO CHECK
-% check_teleporters(X, Y) ->
-%     [{_,DestNodeName,TeleX,TeleY,_,_}] = ets:lookup(teleporterDb, node),
-%     if
-%         (X == TeleX) and (Y == TeleY) ->
-%             if
-%                 DestNodeName ==  mars ->
-%                     ThisNodeName = earth;
-%                 DestNodeName == earth ->
-%                     ThisNodeName = mars
-%             end
-%         true ->
-            
-%     ok.
+check_animal_in_right_world(AnimalName, DestNodeName) ->
+    AnimalInfo = ets:lookup(worldAnimalDb, AnimalName),
+    case AnimalInfo of
+        [_] ->
+            [{_,_,_,_,World}] = AnimalInfo,
+            if
+                World == DestNodeName -> throw("That animal does not exist on this world");
+                true -> ok
+            end;
+        [] -> ok
+    end,
+    AnimalInfo.
 
-check_animal_exists(AnimalName) ->
-    AnimalLookup = ets:lookup(worldAnimalDb, AnimalName),
-    AnimalLookup.
+check_teleporters(X, Y) ->
+    [{_,DestNodeName,TeleX,TeleY,_,_}] = ets:lookup(teleporterDb, node),
+    if
+        (X == TeleX) and (Y == TeleY) ->
+            ThisNodeName = DestNodeName;
+        true ->
+            case DestNodeName of
+                mars -> ThisNodeName = earth;
+                earth -> ThisNodeName = mars
+            end
+    end,
+    {DestNodeName, ThisNodeName}.
 
 check_animals(X, Y) ->
     AnimalCheck = lists:flatten(ets:match(worldAnimalDb, #animal{name='$1', xPosition=X, yPosition=Y})),
