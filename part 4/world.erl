@@ -43,22 +43,21 @@ teleporters_into_db(Teleporters) ->
     ok.
 
 move(AnimalName, {X, Y}) ->
+    check_grid_size(X, Y),
+    
+    check_obstacles({X, Y}, palm),
+    check_obstacles({X, Y}, rock),
+    check_obstacles({X, Y}, water),
+    
+    check_animals(X, Y),
+
     {DestNodeName, ThisNodeName} = check_teleporters(X, Y),
+    
     AnimalInfo = check_animal_in_right_world(AnimalName, DestNodeName),
 
     case AnimalInfo of
-        [_] ->
-            check_grid_size(X, Y),
-            
-            check_obstacles({X, Y}, palm),
-            check_obstacles({X, Y}, rock),
-            check_obstacles({X, Y}, water),
-            
-            check_animals(X, Y),
-
-            gen_server:cast(?MODULE, {move_coords, AnimalName, {X, Y}, ThisNodeName});
-        [] ->
-            animal:start_link(AnimalName, {X, Y}, ThisNodeName)
+        [_] -> gen_server:cast(?MODULE, {move_coords, AnimalName, {X, Y}, ThisNodeName});
+        [] -> animal:start_link(AnimalName, {X, Y}, ThisNodeName)
     end.
 
 check_grid_size(X, Y) ->
