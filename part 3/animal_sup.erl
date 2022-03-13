@@ -9,7 +9,6 @@ start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init(_) ->
-    % world:start_link(),
     {ok, {{one_for_one, 20, 1000000},[]}}.
 
 add_animal(SupPid, AnimalName, {X, Y}) ->
